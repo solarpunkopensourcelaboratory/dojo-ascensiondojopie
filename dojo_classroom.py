@@ -59,7 +59,7 @@ def get_state_paths():
 
 
 SAVE_FILE, JOURNAL_FILE = get_state_paths()
-MISSIONS_FILE = Path(__file__).parent / "missions.json"
+MISSIONS_FILE = Path(__file__).parent / "missions" / "missions.json"
 
 UTA_HAGEN_QUESTIONS = [
     "Who am I in this circumstance?",
@@ -129,18 +129,33 @@ def wait():
 
 
 def load_missions():
-    """Load missions from missions.json"""
-    if not MISSIONS_FILE.exists():
-        print(f"{Fore.RED}Error: {MISSIONS_FILE} not found!{Style.RESET_ALL}")
+    """Load missions from the mission index or fallback to the mission files folder."""
+    mission_dir = MISSIONS_FILE.parent
+
+    if MISSIONS_FILE.exists():
+        try:
+            with open(MISSIONS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return data.get('missions', [])
+        except (OSError, json.JSONDecodeError) as e:
+            print(f"{Fore.RED}Error loading missions: {e}{Style.RESET_ALL}")
+            sys.exit(1)
+
+    mission_files = sorted(mission_dir.glob("mission*.json"))
+    if not mission_files:
+        print(f"{Fore.RED}Error: no mission files found in {mission_dir}{Style.RESET_ALL}")
         sys.exit(1)
 
-    try:
-        with open(MISSIONS_FILE, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        return data.get('missions', [])
-    except (OSError, json.JSONDecodeError) as e:
-        print(f"{Fore.RED}Error loading missions: {e}{Style.RESET_ALL}")
-        sys.exit(1)
+    missions = []
+    for mission_path in mission_files:
+        try:
+            with open(mission_path, 'r', encoding='utf-8') as f:
+                missions.append(json.load(f))
+        except (OSError, json.JSONDecodeError) as e:
+            print(f"{Fore.RED}Error loading mission file {mission_path}: {e}{Style.RESET_ALL}")
+            sys.exit(1)
+
+    return missions
 
 # ─────────────────────────────────────────────
 #  PLAYER CLASS
